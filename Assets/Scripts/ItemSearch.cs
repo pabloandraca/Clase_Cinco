@@ -10,6 +10,12 @@ public class ItemSearch : MonoBehaviour
     [SerializeField] TMP_Text resultText;
 
     bool sortedById = false;
+    bool sortedByName = false;
+
+    string FormatTime(Stopwatch sw)
+    {
+        return $"{sw.Elapsed.TotalMilliseconds:F3} ms";
+    }
 
     public void Search()
     {
@@ -63,19 +69,37 @@ public class ItemSearch : MonoBehaviour
         else
         {
             var sw = Stopwatch.StartNew();
-            int index = LinealNameSearch(query);
+            int indexLineal = LinealNameSearch(query);
             sw.Stop();
             output += $"Lineal Name Search: {FormatTime(sw)}\n";
 
-            if (index >= 0)
+            sw.Restart();
+            int indexBinary = sortedByName ? BinaryNameSearch(query) : -1;
+            sw.Stop();
+            output += $"Binary Name Search: {FormatTime(sw)}\n";
+
+            if (indexLineal >= 0)
             {
-                output += $"Lineal encontro : {itemManager.items[index].Name} (#:{itemManager.items[index].Id})\n";
-                itemManager.HighlithSearcResult(index);
+                output += $"Lineal encontro : {itemManager.items[indexLineal].Name} (#:{itemManager.items[indexLineal].Id})\n";
+                itemManager.HighlithSearcResult(indexLineal);
             }
             else
             {
                 output += "Item not found.";
                 itemManager.ClearHighlights();
+            }
+
+            if (indexBinary >= 0)
+            {
+                output += $"Binary encontro : {itemManager.items[indexBinary].Name} (#:{itemManager.items[indexBinary].Id})\n";
+            }
+            else if (sortedByName)
+            {
+                output += "Item not found in binary search.";
+            }
+            else
+            {
+                output += "List not sorted by Name. Binary search skipped.";
             }
         }
 
@@ -97,11 +121,6 @@ public class ItemSearch : MonoBehaviour
         return -1;
     }
 
-    string FormatTime(Stopwatch sw)
-    {
-        return $"{sw.Elapsed.TotalMilliseconds:F3} ms";
-    }
-
     int BinaryIdSearch(int id)
     {
         int left = 0;
@@ -118,13 +137,46 @@ public class ItemSearch : MonoBehaviour
         return -1;
     }
 
+    int BinaryNameSearch(string name)
+    {
+        int left = 0;
+        int right = itemManager.items.Count - 1;
+
+        while (left <= right)
+        {
+            int mid = left + (right - left) / 2;
+            string midName = itemManager.items[mid].Name;
+            int comparison = string.Compare(midName, name, StringComparison.Ordinal);
+            if (comparison == 0) return mid;
+            if (comparison < 0) left = mid + 1;
+            else right = mid - 1;
+        }
+        return -1;
+    }
+
     public void SortById()
     {
         var sw = Stopwatch.StartNew();
-        ItemSort.Bubble(itemManager.items, (a, b) => a.Id.CompareTo(b.Id));
+        ItemSort.Quick(itemManager.items, (a, b) => a.Id.CompareTo(b.Id));
         sw.Stop();
         resultText.text = $"Sorted by ID in {FormatTime(sw)}";
 
         sortedById = true;
+        sortedByName = false;
+
+        itemManager.PopulateInventory();
+    }
+
+    public void SortByName()
+    {
+        var sw = Stopwatch.StartNew();
+        ItemSort.Quick(itemManager.items, (a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        sw.Stop();
+        resultText.text = $"Sorted by Name in {FormatTime(sw)}";
+
+        sortedByName = true;
+        sortedById = false;
+
+        itemManager.PopulateInventory();
     }
 }

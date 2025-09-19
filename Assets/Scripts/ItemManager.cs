@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 [System.Serializable]
 public struct NameAndSprite
@@ -50,7 +51,7 @@ public class ItemManager : MonoBehaviour
         }
     }
 
-    void PopulateInventory()
+    public void PopulateInventory()
     {
         for (int i = inventoryPanel.childCount - 1; i >= 0; i--)
         {
@@ -91,6 +92,23 @@ public class ItemManager : MonoBehaviour
 
         scrollRect.verticalNormalizedPosition = normalizedPosition;
         Canvas.ForceUpdateCanvases();
+
+        StartCoroutine(SmoothScrollTo(normalizedPosition, 0.15f));
+    }
+
+    IEnumerator SmoothScrollTo(float target, float duration)
+    {
+        if (!scrollRect) yield break;
+        float start = scrollRect.verticalNormalizedPosition;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;
+            float k = Mathf.SmoothStep(0f, 1f, t / duration);
+            scrollRect.verticalNormalizedPosition = Mathf.Lerp(start, target, k);
+            yield return null;
+        }
+        scrollRect.verticalNormalizedPosition = target;
     }
 
     public void HighlithSearcResult(int index)
